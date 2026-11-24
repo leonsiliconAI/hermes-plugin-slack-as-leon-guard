@@ -54,10 +54,10 @@ def test_marker_matches_the_mini_service():
     """The TypeScript service's CLIENT_MSG_ID_PREFIX must equal MARKER."""
     marker_ts = (_root.parents[1] / "packages/ai/leonsilicon/services/slack-as-leon/marker.ts").read_text()
     match = re.search(r'CLIENT_MSG_ID_PREFIX = "([0-9a-f]{8})"', marker_ts)
-    assert match and match.group(1) == plugin.MARKER
+    marker = plugin.call(plugin.__file__, "markerDetails")
+    assert match and match.group(1) == marker["marker"]
     groups = dict(re.findall(r'(grok|codex): "([0-9a-f]{4})"', marker_ts))
-    assert set(groups.values()) == set(plugin.AGENT_GROUPS)
-    assert groups["grok"] == plugin.GROK_BOT_GROUP
+    assert groups == marker["groups"]
 
 
 @pytest.mark.asyncio
@@ -134,7 +134,7 @@ async def test_grok_bot_post_is_answered_and_labelled_not_leon(adapter):
         text="🤖 *Task slack:C_TODO/1700000000.000001*: Done, the list has milk."))
     adapter.handle_message.assert_awaited_once()
     turn = adapter.handle_message.await_args.args[0]
-    assert turn.text.startswith(plugin.GROK_NOTE)
+    assert turn.text.startswith(plugin.agent_note("a Grok bot"))
     assert "Done, the list has milk." in turn.text
     assert turn.source.thread_id == "1700000000.000001"
 
@@ -180,7 +180,7 @@ def test_only_hermes_own_posts_count_as_marked():
     event = {"text": "hi"}
     plugin._label(event)
     plugin._label(event)
-    assert event["text"] == f"{plugin.GROK_NOTE}\nhi"
+    assert event["text"] == plugin.agent_note("a Grok bot") + "\nhi"
 
 
 @pytest.mark.asyncio
