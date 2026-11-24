@@ -1,0 +1,13 @@
+{
+  "name": "@-/com.leonsilicon.hermes.plugins.slack-as-leon-guard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hermes plugin: Hermes ignores the Slack messages it posted as Leon.",
+  "type": "module",
+  "imports": {
+    "#plugin": "./plugin.ts"
+  },
+  "exports": {
+    ".": "./+.ts"
+  }
+}

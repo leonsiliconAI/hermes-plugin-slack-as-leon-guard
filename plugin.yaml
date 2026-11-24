@@ -1,0 +1,7 @@
+name: slack-as-leon-guard
+label: Slack as-Leon guard
+version: 1.2.0
+description: >
+  Filters Hermes's own posts as Leon, labels delegated agents' reports, and keeps replies
+  to slack22grokbot in the bot's named Slack thread.
+author: leonsilicon
