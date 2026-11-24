@@ -1,0 +1,5 @@
+[project]
+name = "hermes-plugin-slack-as-leon-guard"
+version = "1.2.0"
+requires-python = ">=3.11"
+dependencies = ["pythonmonkey==1.5.1"]
