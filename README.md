@@ -23,7 +23,7 @@ In `#leon-` task channels, Hermes reads the handoff thread for context and posts
 ## Install
 
 ```sh
-hermes plugins install leonsiliconAI/slack-as-leon-guard --enable
+hermes plugins install leonsiliconAI/hermes-plugin-slack-as-leon-guard --enable
 ```
 
 See [migration steps](https://github.com/leonsilicon/leonsilicon.ai/blob/main/DEVELOPMENT.md#hermes-plugin-mirrors) for an existing install. Restart the gateway. The gateway log then shows `slack-as-leon-guard: Hermes ignores the Slack messages it posts as Leon`.

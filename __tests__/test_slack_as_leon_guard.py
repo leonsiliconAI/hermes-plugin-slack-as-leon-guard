@@ -50,7 +50,7 @@ def _event(ts: str, client_msg_id: str, **extra) -> dict:
 
 def test_marker_matches_the_mini_service():
     """The TypeScript service's CLIENT_MSG_ID_PREFIX must equal MARKER."""
-    marker_ts = (_root.parents[4] / "ai/leonsilicon/services/slack-as-leon/marker.ts").read_text()
+    marker_ts = (_root.parents[1] / "packages/ai/leonsilicon/services/slack-as-leon/marker.ts").read_text()
     match = re.search(r'CLIENT_MSG_ID_PREFIX = "([0-9a-f]{8})"', marker_ts)
     assert match and match.group(1) == plugin.MARKER
     groups = dict(re.findall(r'(grok|codex): "([0-9a-f]{4})"', marker_ts))
