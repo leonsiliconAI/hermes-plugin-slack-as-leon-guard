@@ -18,7 +18,7 @@ Replies mirrored by `slack22grokbot` carry the third UUID group `4b22`. Hermes a
 
 Grok bots and Codex sessions post reports and questions through the same server. Their markers use `b075` and `c0de`, respectively. Hermes receives those events with a note identifying the author of the report.
 
-In `#leon-` task channels, Hermes reads the handoff thread for context and posts its automatic reply in the main channel conversation. If the delegated agent needs a question or instruction, Hermes can send it separately to the handoff thread. In other channels Hermes answers the report in its thread. When Leon writes directly in a thread, Hermes answers him there.
+Hermes reads and answers agent reports in the shared handoff thread, including in `#leon-` issue channels. The [Hermes progress tracker](../hermes-plugin-hermes22muse/README.md#shared-task-thread-and-progress) posts the separate editable update in the issue channel and refreshes the latest agent excerpts when a report is edited.
 
 ## Install
 

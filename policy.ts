@@ -52,16 +52,12 @@ export function prefilter(event: SlackEvent | undefined, normalized: SlackEvent 
   return { action: isMarked(event) || isMarked(normalized) ? "drop" : "keep" };
 }
 
-export function reportPrompt(
-  route: string,
-  channel: string,
-  thread: string,
-  name: string | undefined,
-) {
-  if (route === "grok") return { prompt: grokInstructions(), flat: false };
-  if (route === "task-channel" && name?.startsWith("leon-"))
-    return { prompt: channelInstructions(channel, thread), flat: true };
-  return { flat: false };
+export function reportPrompt(route: string, thread: string) {
+  const shared =
+    `Use the shared collaboration thread ${thread} for agent questions and follow-ups. ` +
+    "Use slack_task_progress for a checked progress update in the issue channel. " +
+    "Avoid acknowledgement-only messages.";
+  return route === "grok" ? shared + " " + grokInstructions() : shared;
 }
 
 export function reportRoute(event: SlackEvent, ts: string, isDm: boolean, isCommand: boolean) {
@@ -69,7 +65,7 @@ export function reportRoute(event: SlackEvent, ts: string, isDm: boolean, isComm
     return "existing";
   return clientMessageId(event).startsWith(`${marker}-${groups.grok}-${grokBridgeGroup}-`)
     ? "grok"
-    : "task-channel";
+    : "agent";
 }
 
 export function grokInstructions() {
@@ -78,12 +74,5 @@ export function grokInstructions() {
     "when the bot needs an answer or follow-up. Avoid acknowledgement-only messages. " +
     "Once you verify the task is finished, call grok_task_complete with this exact " +
     "channel and Slack thread root to retire the task bot before posting your final summary."
-  );
-}
-
-export function channelInstructions(channel: string, thread: string): string {
-  return (
-    "Post your task update for Leon in this channel. If the agent needs a question or " +
-    `instruction, send it separately with send_message to slack:${channel}:${thread}.`
   );
 }

@@ -16,8 +16,7 @@ One kind of marked post is let through: an agent's, posted through the same serv
 Hermes in the Slack thread of a task Hermes handed it, a Grok bot's (second group ``b075``) or a
 Codex session's that Silicon Dot started (``c0de``). Those posts are Leon's too as far as Slack can
 tell, so the plugin starts their text with a note saying who wrote it (``agent_note``), and Hermes
-answers them as the agent's report. In ``#leon-`` task channels manually posted reports use the
-channel's session. Messages mirrored by slack22grokbot keep their Slack thread as the reply target.
+answers them as the agent's report. Agent replies keep the collaboration thread as their target.
 
 It fails closed: if the adapter internals it relies on disappear, it logs a warning, so check the
 gateway log after a Hermes update.
@@ -27,6 +26,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import os
 
 from ._pythonmonkey import call
 
@@ -68,12 +68,31 @@ def wire(native, adapter) -> None:
     async def guarded(event, *args, **kwargs):
         accepted = await prefilter(event, *args, **kwargs)
         if accepted is None:
+            # Slack avoids starting another Hermes turn for edits. Refresh already-seen reports
+            # separately, preserving that behavior for both the model and the Muse handoff queue.
+            observe_edit = getattr(adapter, "_hermes_task_report_edit", None)
+            if (callable(observe_edit) and isinstance(event, dict) and
+                    event.get("subtype") == "message_changed" and isinstance(event.get("message"), dict)):
+                message = dict(event["message"])
+                payload = args[0] if args else kwargs.get("payload")
+                team = adapter._event_team_id(event, payload, install_set=adapter._team_clients)
+                message["_slack_changed_event_ts"] = event.get("event_ts") or (message.get("edited") or {}).get("ts")
+                try:
+                    observe_edit(team, event.get("channel") or message.get("channel") or "", message)
+                except Exception:
+                    logger.exception("slack-as-leon-guard: could not record the agent report edit")
             return None
         normalized = accepted[0] if isinstance(accepted, tuple) and accepted else None
         decision = call(__file__, "prefilter", event if isinstance(event, dict) else None,
                         normalized if isinstance(normalized, dict) else None)
         source = normalized if isinstance(normalized, dict) else (event or {})
         if decision["action"] == "label":
+            owner = os.getenv("HERMES22MUSE_SLACK_USER_ID") or os.getenv("AUTOLINEAR_USER_ID")
+            # The marked reports come from Leon's Slack connection. Admit those thread replies
+            # even if Slack requires a mention. The adapter still checks workspace and channel access.
+            if (owner and source.get("user") == owner and source.get("thread_ts") and
+                    source["thread_ts"] != source.get("ts")):
+                source["_hermes_force_process"] = True
             logger.info(
                 "slack-as-leon-guard: %s:%s is %s's post; Hermes answers it as one",
                 source.get("channel", ""), source.get("ts", ""), decision["who"])
@@ -91,8 +110,7 @@ def wire(native, adapter) -> None:
         "and answers agents' posts (Grok bots, Codex sessions) labelled as theirs")
 
     build = getattr(adapter, "_build_message_event", None)
-    resolve_name = getattr(adapter, "_resolve_channel_name", None)
-    if not (callable(build) and callable(resolve_name)):
+    if not callable(build):
         logger.warning(
             "slack-as-leon-guard: Slack adapter internals changed; agent reports keep their thread")
         return
@@ -106,16 +124,11 @@ def wire(native, adapter) -> None:
         )
         if route == "existing":
             return await build(event, *args, **kwargs)
-        channel = kwargs.get("channel_id", "")
-        name = await resolve_name(channel, team_id=kwargs["team_id"]) if route == "task-channel" else None
-        plan = call(__file__, "reportPrompt", route, channel, thread, name)
-        if plan["flat"]:
-            # Slack has hydrated the real thread; keep it on the event for context.
-            kwargs["thread_ts"] = None
-            event = {**event, "_hermes_no_thread_response": True}
+        kwargs["thread_ts"] = thread
         turn = await build(event, *args, **kwargs)
-        if turn is not None and plan.get("prompt"):
-            turn.channel_prompt = "\n\n".join(filter(None, (turn.channel_prompt, plan["prompt"])))
+        if turn is not None:
+            prompt = call(__file__, "reportPrompt", route, thread)
+            turn.channel_prompt = "\n\n".join(filter(None, (turn.channel_prompt, prompt)))
         return turn
 
     adapter._build_message_event = build_agent_reply

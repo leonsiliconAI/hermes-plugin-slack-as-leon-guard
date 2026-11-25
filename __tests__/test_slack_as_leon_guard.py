@@ -143,7 +143,7 @@ async def test_grok_bot_post_is_answered_and_labelled_not_leon(adapter):
     GROK_BOT, CODEX, LEONS_OWN, "de1e6a7e-b075-4b22-8f9c-4d72cb551abb",
 ])
 @pytest.mark.asyncio
-async def test_task_channel_routes_agent_reports_to_the_channel(adapter, monkeypatch, client_msg_id):
+async def test_task_channel_keeps_agent_reports_in_the_collaboration_thread(adapter, monkeypatch, client_msg_id):
     plugin.wire(None, adapter)
     adapter._app.client.conversations_info.return_value = {
         "ok": True, "channel": {"name": "leon-379-membership-form"}}
@@ -160,16 +160,14 @@ async def test_task_channel_routes_agent_reports_to_the_channel(adapter, monkeyp
     assert turn.channel_context == "Previous task report"
     assert turn.raw_message["thread_ts"] == root
     mirrored = "-4b22-" in client_msg_id
-    expected_thread = root if client_msg_id == LEONS_OWN or mirrored else None
-    assert turn.source.thread_id == expected_thread
-    if expected_thread is None:
-        assert _reply_anchor_for_event(turn) is None
-        assert f"slack:C_TODO:{root}" in turn.channel_prompt
+    assert turn.source.thread_id == root
+    if client_msg_id != LEONS_OWN:
+        assert root in turn.channel_prompt
     if mirrored:
         assert "grok_task_complete" in turn.channel_prompt
     await adapter.send(turn.source.chat_id, "Task update", reply_to=_reply_anchor_for_event(turn),
                        metadata=_thread_metadata_for_source(turn.source))
-    assert adapter._app.client.chat_postMessage.await_args.kwargs.get("thread_ts") == expected_thread
+    assert adapter._app.client.chat_postMessage.await_args.kwargs.get("thread_ts") == root
 
 
 def test_only_hermes_own_posts_count_as_marked():
