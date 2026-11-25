@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { groups, marker as postMarker } from "./slack.ts";
+import { groups, marker as postMarker } from "#slack";
 
 /** Hermes plugin name, as listed in `plugins.enabled`. */
 export const pluginName = "slack-as-leon-guard";

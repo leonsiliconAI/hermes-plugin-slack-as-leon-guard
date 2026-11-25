@@ -5,7 +5,8 @@
   "description": "Hermes plugin: Hermes ignores the Slack messages it posted as Leon.",
   "type": "module",
   "imports": {
-    "#plugin": "./plugin.ts"
+    "#plugin": "./plugin.ts",
+    "#slack": "./slack.ts"
   },
   "exports": {
     ".": "./+.ts"
