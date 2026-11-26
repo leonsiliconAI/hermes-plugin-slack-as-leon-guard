@@ -33,22 +33,26 @@ export function isMarked(event?: SlackEvent | null): boolean {
   return clientMessageId(event).startsWith(`${marker}-`) && agentOf(event) === null;
 }
 
-export function label(event: SlackEvent, who?: string | null): void {
+/**
+ * The texts that put the note on `event` and on `event.message`, or null where nothing changes.
+ * The caller writes them: JavaScript gets a copy of the event, so it cannot.
+ */
+export function label(event: SlackEvent, who?: string | null) {
   const note = agentNote(who || agentOf(event) || agents[groups.grok]);
-  for (const target of [event, event.message]) {
-    if (typeof target?.text === "string" && !target.text.startsWith(note)) {
-      target.text = `${note}\n${target.text}`;
-    }
-  }
+  const noted = (target?: SlackEvent) => {
+    if (typeof target?.text !== "string" || target.text.startsWith(note)) return null;
+    // Between this plugin's install and the gateway's restart, Hermes still runs the Python of the
+    // copy before 1.3.1, which passes the event itself and reads the text from it. Write it there too.
+    target.text = `${note}\n${target.text}`;
+    return target.text;
+  };
+  return { text: noted(event), message: noted(event.message) };
 }
 
 export function prefilter(event: SlackEvent | undefined, normalized: SlackEvent | undefined) {
   const source = normalized ?? event;
   const who = agentOf(event) || agentOf(normalized);
-  if (source && who) {
-    label(source, who);
-    return { action: "label", who };
-  }
+  if (source && who) return { action: "label", who, label: label(source, who) };
   return { action: isMarked(event) || isMarked(normalized) ? "drop" : "keep" };
 }
 

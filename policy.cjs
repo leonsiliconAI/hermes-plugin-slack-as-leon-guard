@@ -36,20 +36,30 @@ function isGrokBotPost(event) {
 function isMarked(event) {
 	return clientMessageId(event).startsWith(`de1e6a7e-`) && agentOf(event) === null;
 }
+/**
+* The texts that put the note on `event` and on `event.message`, or null where nothing changes.
+* The caller writes them: JavaScript gets a copy of the event, so it cannot.
+*/
 function label(event, who) {
 	const note = agentNote(who || agentOf(event) || agents[groups.grok]);
-	for (const target of [event, event.message]) if (typeof target?.text === "string" && !target.text.startsWith(note)) target.text = `${note}\n${target.text}`;
+	const noted = (target) => {
+		if (typeof target?.text !== "string" || target.text.startsWith(note)) return null;
+		target.text = `${note}\n${target.text}`;
+		return target.text;
+	};
+	return {
+		text: noted(event),
+		message: noted(event.message)
+	};
 }
 function prefilter(event, normalized) {
 	const source = normalized ?? event;
 	const who = agentOf(event) || agentOf(normalized);
-	if (source && who) {
-		label(source, who);
-		return {
-			action: "label",
-			who
-		};
-	}
+	if (source && who) return {
+		action: "label",
+		who,
+		label: label(source, who)
+	};
 	return { action: isMarked(event) || isMarked(normalized) ? "drop" : "keep" };
 }
 function reportPrompt(route, thread) {

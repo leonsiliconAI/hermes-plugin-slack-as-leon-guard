@@ -48,9 +48,17 @@ def is_marked(event) -> bool:
     return isinstance(event, dict) and call(__file__, "isMarked", event)
 
 
+def _write_label(event, texts) -> None:
+    """Put the labelled texts on the event. JavaScript works on a copy, so it returns them."""
+    if texts["text"] is not None:
+        event["text"] = texts["text"]
+    if texts["message"] is not None:
+        event["message"]["text"] = texts["message"]
+
+
 def _label(event, who: str | None = None) -> None:
     if isinstance(event, dict):
-        call(__file__, "label", event, who)
+        _write_label(event, call(__file__, "label", event, who))
 
 
 def wire(native, adapter) -> None:
@@ -87,6 +95,7 @@ def wire(native, adapter) -> None:
                         normalized if isinstance(normalized, dict) else None)
         source = normalized if isinstance(normalized, dict) else (event or {})
         if decision["action"] == "label":
+            _write_label(source, decision["label"])
             owner = os.getenv("HERMES22MUSE_SLACK_USER_ID") or os.getenv("AUTOLINEAR_USER_ID")
             # The marked reports come from Leon's Slack connection. Admit those thread replies
             # even if Slack requires a mention. The adapter still checks workspace and channel access.
